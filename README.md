@@ -1,4 +1,4 @@
-# Flask Healthcheck — sample project
+# NSEAnalysis
 
 Minimal Flask service exposing a single `/health` endpoint that returns JSON `{ "status": "ok" }`.
 
