@@ -210,18 +210,6 @@ def create_app():
         except Exception as exc:
             return jsonify(error=str(exc)), 500
 
-    @app.route("/api/analysis/generate", methods=["POST"])
-    def generate_analysis_endpoint():
-        """Generate or refresh technical analysis for all symbols.
-
-        Returns JSON: {"analyzed": <count>, "message": "Analysis generated successfully"}.
-        """
-        try:
-            count = analysis.generate_analysis()
-            return jsonify(analyzed=count, message="Analysis generated successfully"), 200
-        except Exception as exc:
-            return jsonify(error=str(exc)), 500
-
     @app.route("/api/analysis/data", methods=["GET"])
     def get_analysis_data():
         """Retrieve technical analysis data.

@@ -3,6 +3,10 @@
 Defaults use environment variables with sensible fallbacks so other scripts can
 import and reuse a single connection pool.
 
+Hosted deployment support:
+- If DATABASE_URL is present, it is preferred (Render-friendly).
+- sslmode=require is added when missing.
+
 Defaults used (can be overridden with env vars):
 - host: localhost
 - port: 5432
@@ -21,7 +25,8 @@ from __future__ import annotations
 import contextlib
 import logging
 import os
-from typing import Iterator, Optional
+from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from typing import Any, Iterator, Optional
 
 try:
     import psycopg2
@@ -39,19 +44,59 @@ except Exception:
 logger = logging.getLogger(__name__)
 
 # Module-level pool instance
-_POOL: Optional[pool.ThreadedConnectionPool] = None
+_POOL: Optional[Any] = None
+
+
+def _normalize_database_url(database_url: str) -> str:
+    """Normalize Postgres URL and ensure SSL mode for hosted DB providers.
+
+    Render typically provides DATABASE_URL. This helper:
+    - supports both postgres:// and postgresql:// schemes
+    - injects sslmode=require when missing
+    """
+    if not database_url:
+        return database_url
+
+    if database_url.startswith("postgres://"):
+        database_url = "postgresql://" + database_url[len("postgres://"):]
+
+    parsed = urlparse(database_url)
+    query_params = dict(parse_qsl(parsed.query, keep_blank_values=True))
+    query_params.setdefault("sslmode", os.getenv("DB_SSLMODE", "require"))
+    query = urlencode(query_params)
+
+    return urlunparse(
+        (
+            parsed.scheme,
+            parsed.netloc,
+            parsed.path,
+            parsed.params,
+            query,
+            parsed.fragment,
+        )
+    )
+
+
+_DATABASE_URL = _normalize_database_url(os.getenv("DATABASE_URL", ""))
 
 # Default DB configuration (can be overridden by environment variables)
-_DEFAULT_CONFIG = {
-    "host": os.getenv("DB_HOST", "localhost"),
-    "port": int(os.getenv("DB_PORT", "5432")),
-    "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD", "admin"),
-    "dbname": os.getenv("DB_NAME", "NSE"),
-}
+if _DATABASE_URL:
+    _DEFAULT_CONFIG = {
+        "dsn": _DATABASE_URL,
+        "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+    }
+else:
+    _DEFAULT_CONFIG = {
+        "host": os.getenv("DB_HOST", "localhost"),
+        "port": int(os.getenv("DB_PORT", "5432")),
+        "user": os.getenv("DB_USER", "postgres"),
+        "password": os.getenv("DB_PASSWORD", "admin"),
+        "dbname": os.getenv("DB_NAME", "NSE"),
+        "connect_timeout": int(os.getenv("DB_CONNECT_TIMEOUT", "10")),
+    }
 
 
-def init_pool(minconn: int = 1, maxconn: int = 5, **overrides) -> pool.ThreadedConnectionPool:
+def init_pool(minconn: int = 1, maxconn: int = 5, **overrides) -> Any:
     """Initialize and return a module-level threaded connection pool.
 
     Subsequent calls will return the already-initialized pool.
@@ -76,7 +121,7 @@ def init_pool(minconn: int = 1, maxconn: int = 5, **overrides) -> pool.ThreadedC
 
 
 @contextlib.contextmanager
-def get_connection() -> Iterator[psycopg2.extensions.connection]:
+def get_connection() -> Iterator[Any]:
     """Context manager yielding a DB connection from the pool.
 
     Automatically initializes the pool on first use with default settings.
@@ -94,7 +139,7 @@ def get_connection() -> Iterator[psycopg2.extensions.connection]:
 
 
 @contextlib.contextmanager
-def get_cursor(commit: bool = False) -> Iterator[psycopg2.extensions.cursor]:
+def get_cursor(commit: bool = False) -> Iterator[Any]:
     """Context manager yielding a cursor from a pooled connection.
 
     If `commit=True` the connection will be committed on successful exit,
