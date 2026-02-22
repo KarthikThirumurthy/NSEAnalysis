@@ -17,7 +17,16 @@ def create_app():
     app = Flask(__name__)
     CORS(app)  # Enable CORS for all routes
     log_level = os.getenv("LOG_LEVEL", "INFO").upper()
-    app.logger.setLevel(getattr(logging, log_level, logging.INFO))
+    resolved_log_level = getattr(logging, log_level, logging.INFO)
+    app.logger.setLevel(resolved_log_level)
+
+    root_logger = logging.getLogger()
+    root_logger.setLevel(resolved_log_level)
+
+    logging.getLogger("db.connection").setLevel(resolved_log_level)
+    logging.getLogger("flask_healthcheck").setLevel(resolved_log_level)
+
+    app.logger.info("Logging initialized at level=%s", log_level)
 
     def ensure_auth_schema():
         app.logger.info("Ensuring auth schema/table exists")
