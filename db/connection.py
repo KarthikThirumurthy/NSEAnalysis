@@ -113,10 +113,18 @@ def init_pool(minconn: int = 1, maxconn: int = 5, **overrides) -> Any:
     cfg = _DEFAULT_CONFIG.copy()
     cfg.update({k: v for k, v in overrides.items() if v is not None})
 
+    if cfg.get("dsn"):
+        logger.info("Initializing PostgreSQL pool using DATABASE_URL (sslmode=%s, timeout=%s)",
+                    os.getenv("DB_SSLMODE", "require"), cfg.get("connect_timeout"))
+    else:
+        logger.info("Initializing PostgreSQL pool host=%s port=%s db=%s user=%s timeout=%s",
+                    cfg.get("host"), cfg.get("port"), cfg.get("dbname"), cfg.get("user"), cfg.get("connect_timeout"))
+
     logger.debug("Initializing PostgreSQL pool: host=%s port=%s db=%s user=%s",
                  cfg.get("host"), cfg.get("port"), cfg.get("dbname"), cfg.get("user"))
 
     _POOL = pool.ThreadedConnectionPool(minconn, maxconn, **cfg)
+    logger.info("PostgreSQL pool initialized successfully")
     return _POOL
 
 
@@ -129,13 +137,16 @@ def get_connection() -> Iterator[Any]:
     """
     global _POOL
     if _POOL is None:
+        logger.info("PostgreSQL pool not initialized; initializing now")
         init_pool()
 
+    logger.info("Acquiring PostgreSQL connection from pool")
     conn = _POOL.getconn()
     try:
         yield conn
     finally:
         _POOL.putconn(conn)
+        logger.info("Returned PostgreSQL connection to pool")
 
 
 @contextlib.contextmanager
@@ -146,24 +157,30 @@ def get_cursor(commit: bool = False) -> Iterator[Any]:
     and rolled back on exception.
     """
     with get_connection() as conn:
+        logger.info("Opening PostgreSQL cursor (commit=%s)", commit)
         cur = conn.cursor()
         try:
             yield cur
             if commit:
                 conn.commit()
+                logger.info("PostgreSQL transaction committed")
         except Exception:
             conn.rollback()
+            logger.exception("PostgreSQL transaction rolled back due to error")
             raise
         finally:
             cur.close()
+            logger.info("PostgreSQL cursor closed")
 
 
 def close_pool() -> None:
     """Close all pooled connections and clear the pool."""
     global _POOL
     if _POOL is not None:
+        logger.info("Closing all PostgreSQL pooled connections")
         _POOL.closeall()
         _POOL = None
+        logger.info("PostgreSQL pool closed")
 
 
 __all__ = ["init_pool", "get_connection", "get_cursor", "close_pool"]

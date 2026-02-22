@@ -6,6 +6,7 @@ from scripts.import_bhav import import_bhav_csv
 from scripts import analysis
 import os
 import csv
+import logging
 from io import StringIO
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -15,8 +16,11 @@ def create_app():
     """Application factory returning a Flask app with a /health route."""
     app = Flask(__name__)
     CORS(app)  # Enable CORS for all routes
+    log_level = os.getenv("LOG_LEVEL", "INFO").upper()
+    app.logger.setLevel(getattr(logging, log_level, logging.INFO))
 
     def ensure_auth_schema():
+        app.logger.info("Ensuring auth schema/table exists")
         try:
             with db_connection.get_cursor(commit=True) as cur:
                 cur.execute("CREATE SCHEMA IF NOT EXISTS NSE_BHAV")
@@ -30,8 +34,9 @@ def create_app():
                     )
                     """
                 )
+            app.logger.info("Auth schema/table check completed")
         except Exception as exc:
-            app.logger.error("Auth schema init failed: %s", exc)
+            app.logger.exception("Auth schema init failed: %s", exc)
 
     ensure_auth_schema()
 
@@ -47,11 +52,14 @@ def create_app():
         500 with an error payload when not.
         """
         try:
+            app.logger.info("/health/db: checking DB connectivity")
             # Use the centralized DB helper; monkeypatchable in tests
             with db_connection.get_cursor() as cur:
                 cur.execute("SELECT 1")
+            app.logger.info("/health/db: DB connectivity check successful")
             return jsonify(status="ok", db="ok")
         except Exception as exc:
+            app.logger.exception("/health/db: DB connectivity check failed: %s", exc)
             return jsonify(status="error", db="unavailable", error=str(exc)), 500
 
     @app.route("/api/auth/register", methods=["POST"])
@@ -71,12 +79,14 @@ def create_app():
         password_hash = generate_password_hash(password)
 
         try:
+            app.logger.info("/api/auth/register: attempting registration for username=%s", username)
             with db_connection.get_cursor(commit=True) as cur:
                 cur.execute(
                     "SELECT 1 FROM NSE_BHAV.app_users WHERE username = %s",
                     (username,)
                 )
                 if cur.fetchone():
+                    app.logger.warning("/api/auth/register: username already exists username=%s", username)
                     return jsonify(error="username already exists"), 409
 
                 cur.execute(
@@ -89,12 +99,14 @@ def create_app():
                 )
                 user_id, created_at = cur.fetchone()
 
+            app.logger.info("/api/auth/register: registration successful username=%s user_id=%s", username, user_id)
             return jsonify(
                 message="registered",
                 user_id=user_id,
                 created_at=created_at.isoformat(),
             ), 201
         except Exception as exc:
+            app.logger.exception("/api/auth/register: registration failed username=%s error=%s", username, exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/auth/login", methods=["POST"])
@@ -108,6 +120,7 @@ def create_app():
             return jsonify(error="username and password are required"), 400
 
         try:
+            app.logger.info("/api/auth/login: login attempt username=%s", username)
             with db_connection.get_cursor() as cur:
                 cur.execute(
                     "SELECT id, password_hash FROM NSE_BHAV.app_users WHERE username = %s",
@@ -115,14 +128,18 @@ def create_app():
                 )
                 row = cur.fetchone()
                 if not row:
+                    app.logger.warning("/api/auth/login: invalid username username=%s", username)
                     return jsonify(error="invalid username or password"), 401
 
                 user_id, password_hash = row
                 if not check_password_hash(password_hash, password):
+                    app.logger.warning("/api/auth/login: invalid password username=%s", username)
                     return jsonify(error="invalid username or password"), 401
 
+            app.logger.info("/api/auth/login: authentication successful username=%s user_id=%s", username, user_id)
             return jsonify(message="authenticated", user_id=user_id), 200
         except Exception as exc:
+            app.logger.exception("/api/auth/login: login failed username=%s error=%s", username, exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/auth/reset-password", methods=["POST"])
@@ -140,6 +157,7 @@ def create_app():
         new_hash = generate_password_hash(new_password)
 
         try:
+            app.logger.info("/api/auth/reset-password: reset attempt username=%s", username)
             with db_connection.get_cursor(commit=True) as cur:
                 cur.execute(
                     "SELECT id FROM NSE_BHAV.app_users WHERE username = %s",
@@ -147,6 +165,7 @@ def create_app():
                 )
                 row = cur.fetchone()
                 if not row:
+                    app.logger.warning("/api/auth/reset-password: user not found username=%s", username)
                     return jsonify(error="user not found"), 404
 
                 cur.execute(
@@ -154,8 +173,10 @@ def create_app():
                     (new_hash, username),
                 )
 
+            app.logger.info("/api/auth/reset-password: password reset successful username=%s", username)
             return jsonify(message="password_reset"), 200
         except Exception as exc:
+            app.logger.exception("/api/auth/reset-password: reset failed username=%s error=%s", username, exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/import/stock_market_data", methods=["POST"])
@@ -171,11 +192,14 @@ def create_app():
         file = request.files["file"]
         import io
         try:
+            app.logger.info("/import/stock_market_data: import started filename=%s", file.filename)
             # FileStorage.stream is binary — wrap as text for csv reader
             stream = io.TextIOWrapper(file.stream, encoding="utf-8")
             inserted = import_bhav_csv(stream)
+            app.logger.info("/import/stock_market_data: import completed inserted=%s", inserted)
             return jsonify(inserted=inserted)
         except Exception as exc:
+            app.logger.exception("/import/stock_market_data: import failed error=%s", exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/analysis/generate", methods=["POST"])
@@ -186,9 +210,12 @@ def create_app():
         Returns JSON: {\"analyzed\": <count>}.
         """
         try:
+            app.logger.info("/api/analysis/generate: analysis generation started")
             count = analysis.generate_analysis()
+            app.logger.info("/api/analysis/generate: analysis generation completed analyzed=%s", count)
             return jsonify(analyzed=count)
         except Exception as exc:
+            app.logger.exception("/api/analysis/generate: analysis generation failed error=%s", exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/analysis/results", methods=["GET"])
@@ -204,10 +231,13 @@ def create_app():
         try:
             limit = request.args.get("limit", default=100, type=int)
             order_by = request.args.get("order_by", default="symbol", type=str)
-            
+
+            app.logger.info("/api/analysis/results: fetching analysis results limit=%s order_by=%s", limit, order_by)
             results = analysis.get_analysis(limit=limit, order_by=order_by)
+            app.logger.info("/api/analysis/results: rows fetched=%s", len(results))
             return jsonify(results=results, count=len(results))
         except Exception as exc:
+            app.logger.exception("/api/analysis/results: fetch failed error=%s", exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/analysis/data", methods=["GET"])
@@ -227,10 +257,13 @@ def create_app():
             limit = request.args.get("limit", 100, type=int)
             limit = min(limit, 1000)  # Cap at 1000
             order_by = request.args.get("order_by", "symbol", type=str)
-            
+
+            app.logger.info("/api/analysis/data: fetching analysis data limit=%s order_by=%s", limit, order_by)
             data = analysis.get_analysis(limit=limit, order_by=order_by)
+            app.logger.info("/api/analysis/data: rows fetched=%s", len(data))
             return jsonify(data=data, count=len(data)), 200
         except Exception as exc:
+            app.logger.exception("/api/analysis/data: fetch failed error=%s", exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/historical/<symbol>", methods=["GET"])
@@ -268,12 +301,15 @@ def create_app():
             """
 
             with db_connection.get_cursor() as cur:
+                app.logger.info("/api/historical/%s: querying historical data limit=%s sort_by=%s", symbol, limit, sort_by)
                 cur.execute(query, (symbol, limit))
                 cols = [desc[0] for desc in cur.description]
                 rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+                app.logger.info("/api/historical/%s: query returned rows=%s", symbol, len(rows))
                 return jsonify(symbol=symbol, count=len(rows), data=rows), 200
 
         except Exception as exc:
+            app.logger.exception("/api/historical/%s: query failed error=%s", symbol, exc)
             return jsonify(error=str(exc)), 500
 
     @app.route('/api/filter/trend', methods=['GET'])
@@ -337,13 +373,16 @@ def create_app():
             params = (days, days)
 
             with db_connection.get_cursor() as cur:
+                app.logger.info("/api/filter/trend: querying trend days=%s trend=%s parameter=%s", days, trend, parameter)
                 cur.execute(query, params)
                 cols = [desc[0] for desc in cur.description]
                 rows = [dict(zip(cols, row)) for row in cur.fetchall()]
+                app.logger.info("/api/filter/trend: query returned rows=%s", len(rows))
 
             return jsonify(count=len(rows), results=rows), 200
 
         except Exception as exc:
+            app.logger.exception("/api/filter/trend: query failed error=%s", exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/analysis/<symbol>", methods=["GET"])
@@ -373,16 +412,20 @@ def create_app():
             """
 
             with db_connection.get_cursor() as cur:
+                app.logger.info("/api/analysis/%s: querying analysis row", symbol)
                 cur.execute(query, (symbol,))
                 cols = [desc[0] for desc in cur.description]
                 row = cur.fetchone()
                 if row:
                     data = dict(zip(cols, row))
+                    app.logger.info("/api/analysis/%s: row found", symbol)
                     return jsonify(symbol=symbol, found=True, data=data), 200
                 else:
+                    app.logger.info("/api/analysis/%s: row not found", symbol)
                     return jsonify(symbol=symbol, found=False, error="Symbol not found in analysis"), 404
 
         except Exception as exc:
+            app.logger.exception("/api/analysis/%s: query failed error=%s", symbol, exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/download/analysis-all", methods=["GET"])
@@ -399,9 +442,11 @@ def create_app():
             """
             
             with db_connection.get_cursor() as cur:
+                app.logger.info("/api/download/analysis-all: querying analysis dataset")
                 cur.execute(query)
                 rows = cur.fetchall()
                 cols = [desc[0] for desc in cur.description]
+            app.logger.info("/api/download/analysis-all: rows fetched=%s", len(rows))
             
             # Create CSV
             output = StringIO()
@@ -417,6 +462,7 @@ def create_app():
             
             return response
         except Exception as exc:
+            app.logger.exception("/api/download/analysis-all: query failed error=%s", exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/download/historical-all", methods=["GET"])
@@ -434,9 +480,11 @@ def create_app():
             """
             
             with db_connection.get_cursor() as cur:
+                app.logger.info("/api/download/historical-all: querying historical dataset (10 days)")
                 cur.execute(query)
                 rows = cur.fetchall()
                 cols = [desc[0] for desc in cur.description]
+            app.logger.info("/api/download/historical-all: rows fetched=%s", len(rows))
             
             # Create CSV
             output = StringIO()
@@ -452,6 +500,7 @@ def create_app():
             
             return response
         except Exception as exc:
+            app.logger.exception("/api/download/historical-all: query failed error=%s", exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/api/download/historical/<symbol>", methods=["GET"])
@@ -470,9 +519,11 @@ def create_app():
             """
             
             with db_connection.get_cursor() as cur:
+                app.logger.info("/api/download/historical/%s: querying historical dataset", symbol)
                 cur.execute(query, (symbol,))
                 rows = cur.fetchall()
                 cols = [desc[0] for desc in cur.description]
+            app.logger.info("/api/download/historical/%s: rows fetched=%s", symbol, len(rows))
             
             if not rows:
                 return jsonify(error=f"No data found for symbol: {symbol}"), 404
@@ -491,6 +542,7 @@ def create_app():
             
             return response
         except Exception as exc:
+            app.logger.exception("/api/download/historical/%s: query failed error=%s", symbol, exc)
             return jsonify(error=str(exc)), 500
 
     @app.route("/", methods=["GET"])
