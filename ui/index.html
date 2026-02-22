@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Stock Market Analysis</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .container-custom {
+            max-width: 1400px;
+            margin-top: 30px;
+            margin-bottom: 30px;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .header h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+        
+        .header p {
+            color: #7f8c8d;
+            margin: 0;
+        }
+        
+        .search-section {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .input-group-custom {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .input-group-custom input {
+            flex: 1;
+            padding: 12px 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .input-group-custom input:focus {
+            border-color: var(--secondary-color);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+        }
+        
+        .btn-primary-custom {
+            background: var(--secondary-color);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-primary-custom:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-secondary-custom {
+            background: #95a5a6;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+        
+        .btn-secondary-custom:hover {
+            background: #7f8c8d;
+        }
+        
+        .results-section {
+            display: none;
+        }
+        
+        .results-section.active {
+            display: block;
+        }
+        
+        .card-custom {
+            background: white;
+            border: none;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .card-header-custom {
+            background: var(--primary-color);
+            color: white;
+            padding: 20px;
+            border-bottom: 4px solid var(--secondary-color);
+        }
+        
+        .card-header-custom h3 {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        
+        .card-body-custom {
+            padding: 20px;
+        }
+        
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .metric-card {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .table-custom {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        
+        .table-custom thead {
+            background: #ecf0f1;
+        }
+        
+        .table-custom th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--primary-color);
+            border-bottom: 2px solid #bdc3c7;
+        }
+        
+        .table-custom td {
+            padding: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        
+        .table-custom tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner-border {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #ecf0f1;
+            border-top-color: var(--secondary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .error-box {
+            background: #fadbd8;
+            color: #c0392b;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #c0392b;
+            display: none;
+        }
+        
+        .error-box.active {
+            display: block;
+        }
+        
+        .success-box {
+            background: #d5f4e6;
+            color: #27ae60;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #27ae60;
+        }
+
+        .auth-status {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .auth-status.success {
+            display: block;
+            background: #d5f4e6;
+            color: #27ae60;
+            border-left: 4px solid #27ae60;
+        }
+
+        .auth-status.error {
+            display: block;
+            background: #fadbd8;
+            color: #c0392b;
+            border-left: 4px solid #c0392b;
+        }
+        
+        .symbol-badge {
+            font-size: 18px;
+            font-weight: 700;
+            color: white;
+            background: var(--secondary-color);
+            padding: 8px 16px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 40px;
+            padding: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .input-group-custom {
+                flex-direction: column;
+            }
+            
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .table-custom {
+                font-size: 14px;
+            }
+            
+            .table-custom th, .table-custom td {
+                padding: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container container-custom">
+        <!-- Login Screen -->
+        <div id="loginScreen">
+            <div class="header">
+                <h1><i class="bi bi-graph-up"></i> NSE Insights</h1>
+                <p>Sign in to access symbol search and trend analysis</p>
+            </div>
+
+            <div class="search-section">
+                <h5><i class="bi bi-person-circle"></i> Login</h5>
+                <div class="input-group-custom" style="margin-bottom: 10px;">
+                    <input
+                        type="text"
+                        id="loginUsername"
+                        placeholder="Username"
+                    >
+                    <input
+                        type="password"
+                        id="loginPassword"
+                        placeholder="Password"
+                    >
+                </div>
+                <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                    <button class="btn-primary-custom" onclick="loginUser()">
+                        <i class="bi bi-box-arrow-in-right"></i> Login
+                    </button>
+                    <button class="btn-secondary-custom" onclick="registerUser()">
+                        <i class="bi bi-person-plus"></i> Register
+                    </button>
+                </div>
+                <div class="auth-status" id="authStatus"></div>
+                <div style="margin-top: 8px;">
+                    <button class="btn-secondary-custom" onclick="toggleResetForm()" style="padding: 8px 14px;">
+                        <i class="bi bi-unlock"></i> Forgot password?
+                    </button>
+                </div>
+                <div id="resetForm" style="display:none; margin-top: 12px;">
+                    <div class="input-group-custom" style="margin-bottom: 10px;">
+                        <input
+                            type="text"
+                            id="resetUsername"
+                            placeholder="Username for reset"
+                        >
+                        <input
+                            type="password"
+                            id="resetPassword"
+                            placeholder="New password"
+                        >
+                    </div>
+                    <button class="btn-primary-custom" onclick="resetPassword()">
+                        <i class="bi bi-arrow-repeat"></i> Reset Password
+                    </button>
+                </div>
+                <div style="font-size: 12px; color: #7f8c8d; margin-top:8px;">
+                    <i class="bi bi-info-circle"></i> Login validates the username and password against the backend
+                </div>
+            </div>
+        </div>
+
+        <!-- Home Screen -->
+        <div id="appScreen" style="display:none;">
+            <div class="header">
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                    <div>
+                        <h1><i class="bi bi-graph-up"></i> NSE Insights</h1>
+                        <p>Real-time historical data and technical analysis for stock symbols</p>
+                    </div>
+                    <button class="btn-secondary-custom" onclick="logoutUser()">
+                        <i class="bi bi-box-arrow-right"></i> Logout
+                    </button>
+                </div>
+            </div>
+
+            <ul class="nav nav-tabs" id="searchTabs" role="tablist" style="margin-bottom: 20px;">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="symbol-tab" data-bs-toggle="tab" data-bs-target="#symbol-pane" type="button" role="tab" aria-controls="symbol-pane" aria-selected="true">
+                    <i class="bi bi-search"></i> Symbol Search
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="trend-tab" data-bs-toggle="tab" data-bs-target="#trend-pane" type="button" role="tab" aria-controls="trend-pane" aria-selected="false">
+                    <i class="bi bi-bar-chart-line"></i> Trend Search
+                </button>
+            </li>
+        </ul>
+
+            <div class="tab-content" id="searchTabsContent">
+            <div class="tab-pane fade show active" id="symbol-pane" role="tabpanel" aria-labelledby="symbol-tab">
+                <!-- Symbol Search -->
+                <div class="search-section">
+                    <h5><i class="bi bi-search"></i> Symbol Search</h5>
+                    <div class="input-group-custom">
+                        <input 
+                            type="text" 
+                            id="symbolInput" 
+                            placeholder="Enter stock symbol (e.g., ABB, AARTIIND, 3MINDIA)" 
+                            onkeypress="handleKeyPress(event)"
+                        >
+                        <button class="btn-primary-custom" onclick="searchSymbol()">
+                            <i class="bi bi-search"></i> Search
+                        </button>
+                    </div>
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top:8px;">
+                        <i class="bi bi-info-circle"></i> Search and view analysis/historical data for a single symbol
+                    </div>
+                </div>
+
+                <!-- Symbol Results Section -->
+                <div id="symbolResultsSection" class="results-section">
+                    <!-- Current Day Analysis -->
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            <h3><i class="bi bi-speedometer2"></i> Current Analysis</h3>
+                        </div>
+                        <div class="card-body-custom">
+                            <div id="analysisContent"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Historical Data -->
+                    <div class="card-custom">
+                        <div class="card-header-custom">
+                            <h3><i class="bi bi-clock-history"></i> Historical Data (Last 10 Days)</h3>
+                        </div>
+                        <div class="card-body-custom">
+                            <div id="historicalContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tab-pane fade" id="trend-pane" role="tabpanel" aria-labelledby="trend-tab">
+                <!-- Trend Analysis (All symbols) -->
+                <div class="search-section" style="background: #f7fbff; border-left: 4px solid var(--secondary-color);">
+                    <h5><i class="bi bi-bar-chart-line"></i> Trend Analysis (All Symbols)</h5>
+                    <div style="display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap;">
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <label style="font-size:12px; color:#7f8c8d;">Days</label>
+                            <input id="trendDays" type="number" min="2" max="60" value="5" style="width:80px; padding:6px; border-radius:6px; border:1px solid #ecf0f1;">
+                        </div>
+
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <label style="font-size:12px; color:#7f8c8d;">Parameter</label>
+                            <select id="trendParameter" style="padding:6px; border-radius:6px; border:1px solid #ecf0f1;">
+                                <option value="close_price">Close Price</option>
+                                <option value="deliv_qty">Delivery Quantity</option>
+                            </select>
+                        </div>
+
+                        <div style="display:flex; gap:8px; align-items:center;">
+                            <label style="font-size:12px; color:#7f8c8d;">Trend</label>
+                            <select id="trendType" style="padding:6px; border-radius:6px; border:1px solid #ecf0f1;">
+                                <option value="increase">Increasing</option>
+                                <option value="decrease">Decreasing</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <button class="btn-secondary-custom" onclick="applyTrendFilter()">
+                                <i class="bi bi-filter"></i> Run Trend Analysis
+                            </button>
+                        </div>
+
+                        <div style="font-size: 12px; color: #7f8c8d; margin-left:auto;">
+                            <i class="bi bi-info-circle"></i> This analysis scans all symbols in the dataset
+                        </div>
+                    </div>
+
+                    <div style="font-size: 12px; color: #7f8c8d; margin-top:8px;">
+                        Tip: use a higher 'Days' value to detect longer-term trends.
+                    </div>
+                </div>
+
+                <!-- Trend Results Section -->
+                <div id="trendResultsSection" class="results-section">
+                    <div id="trendResultsCard" class="card-custom" style="display:none;">
+                        <div class="card-header-custom">
+                            <h3><i class="bi bi-bar-chart-line-fill"></i> Trend Analysis Results (All Symbols)</h3>
+                        </div>
+                        <div class="card-body-custom">
+                            <div id="trendResultsContent">No results yet. Run the Trend Analysis to scan all symbols for monotonic increase/decrease.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            </div>
+
+            <!-- Download Section -->
+            <div class="search-section" style="background: #e8f4f8; border-left: 4px solid var(--secondary-color);">
+                <h5><i class="bi bi-download"></i> Export Data</h5>
+                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+                    <button class="btn-primary-custom" onclick="downloadAnalysisData()" style="background: var(--success-color);">
+                        <i class="bi bi-file-earmark-csv"></i> Download All Analysis Data
+                    </button>
+                    <button class="btn-primary-custom" onclick="downloadHistoricalData()" style="background: var(--success-color);">
+                        <i class="bi bi-file-earmark-csv"></i> Download 10-Day History
+                    </button>
+                </div>
+                <div style="font-size: 12px; color: #7f8c8d; margin-top: 10px;">
+                    <i class="bi bi-info-circle"></i> Export complete datasets as CSV for offline analysis
+                </div>
+            </div>
+        </div>
+        
+        <!-- Error Box -->
+        <div id="errorBox" class="error-box"></div>
+        
+        <!-- Loading -->
+        <div id="loading" class="loading">
+            <div class="spinner-border"></div>
+            <p style="margin-top: 15px; color: white;">Loading data...</p>
+        </div>
+        
+    </div>
+    
+    <!-- Footer -->
+    <div class="footer">
+        <p>NSE Stock Market Data Platform | Last Updated: <span id="updateTime">-</span></p>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_BASE = 'http://127.0.0.1:5000';
+
+        function activateTab(tabId) {
+            const tabButton = document.getElementById(tabId);
+            if (tabButton && window.bootstrap && bootstrap.Tab) {
+                const tab = new bootstrap.Tab(tabButton);
+                tab.show();
+            }
+        }
+        
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                searchSymbol();
+            }
+        }
+        
+        function showLoading(show) {
+            const loading = document.getElementById('loading');
+            if (show) {
+                loading.classList.add('active');
+            } else {
+                loading.classList.remove('active');
+            }
+        }
+        
+        function showError(message) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.textContent = '❌ ' + message;
+            errorBox.classList.add('active');
+            setTimeout(() => {
+                errorBox.classList.remove('active');
+            }, 5000);
+        }
+        
+        function hideError() {
+            document.getElementById('errorBox').classList.remove('active');
+        }
+        
+        function formatNumber(num, decimals = 2) {
+            if (num === null || num === undefined) return 'N/A';
+            return parseFloat(num).toLocaleString('en-IN', {
+                minimumFractionDigits: decimals,
+                maximumFractionDigits: decimals
+            });
+        }
+        
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-IN', options);
+        }
+
+        function showAuthStatus(message, isError) {
+            const box = document.getElementById('authStatus');
+            box.textContent = message;
+            box.classList.remove('success', 'error');
+            box.classList.add(isError ? 'error' : 'success');
+        }
+
+        function showScreen(screen) {
+            const loginScreen = document.getElementById('loginScreen');
+            const appScreen = document.getElementById('appScreen');
+            if (screen === 'app') {
+                loginScreen.style.display = 'none';
+                appScreen.style.display = 'block';
+            } else {
+                loginScreen.style.display = 'block';
+                appScreen.style.display = 'none';
+            }
+        }
+
+        function toggleResetForm() {
+            const resetForm = document.getElementById('resetForm');
+            const isHidden = resetForm.style.display === 'none' || resetForm.style.display === '';
+            resetForm.style.display = isHidden ? 'block' : 'none';
+        }
+
+        function getAuthPayload() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showAuthStatus('Username and password are required.', true);
+                return null;
+            }
+
+            return { username, password };
+        }
+
+        async function loginUser() {
+            const payload = getAuthPayload();
+            if (!payload) return;
+
+            showLoading(true);
+            try {
+                const resp = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || 'Login failed');
+                }
+                showAuthStatus('Login successful.', false);
+                showScreen('app');
+            } catch (err) {
+                showAuthStatus(err.message, true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function registerUser() {
+            const payload = getAuthPayload();
+            if (!payload) return;
+
+            showLoading(true);
+            try {
+                const resp = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || 'Registration failed');
+                }
+                showAuthStatus('Registration successful. You can log in now.', false);
+            } catch (err) {
+                showAuthStatus(err.message, true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        async function resetPassword() {
+            const username = document.getElementById('resetUsername').value.trim();
+            const newPassword = document.getElementById('resetPassword').value;
+
+            if (!username || !newPassword) {
+                showAuthStatus('Username and new password are required.', true);
+                return;
+            }
+
+            showLoading(true);
+            try {
+                const resp = await fetch(`${API_BASE}/api/auth/reset-password`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, new_password: newPassword })
+                });
+                const data = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(data.error || 'Password reset failed');
+                }
+                document.getElementById('resetPassword').value = '';
+                document.getElementById('resetUsername').value = '';
+                showAuthStatus('Password reset successfully. You can log in now.', false);
+            } catch (err) {
+                showAuthStatus(err.message, true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function logoutUser() {
+            document.getElementById('loginPassword').value = '';
+            showAuthStatus('Logged out.', false);
+            showScreen('login');
+        }
+        
+        async function searchSymbol() {
+            const symbol = document.getElementById('symbolInput').value.trim().toUpperCase();
+            
+            if (!symbol) {
+                showError('Please enter a symbol');
+                return;
+            }
+            
+            hideError();
+            showLoading(true);
+            
+            try {
+                // Fetch analysis data
+                const analysisResp = await fetch(`${API_BASE}/api/analysis/${symbol}`);
+                const analysisData = await analysisResp.json();
+                
+                // Fetch historical data
+                const historicalResp = await fetch(`${API_BASE}/api/historical/${symbol}?limit=10&sort_by=date`);
+                const historicalData = await historicalResp.json();
+                
+                if (!analysisData.found || historicalData.count === 0) {
+                    showError(`No data found for symbol: ${symbol}`);
+                    showLoading(false);
+                    return;
+                }
+                
+                displayAnalysis(analysisData.data);
+                displayHistorical(historicalData.data, symbol);
+
+                document.getElementById('symbolResultsSection').classList.add('active');
+                activateTab('symbol-tab');
+                document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('en-IN');
+                
+            } catch (error) {
+                showError('Error fetching data: ' + error.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+        
+        async function applyTrendFilter() {
+            hideError();
+            const days = parseInt(document.getElementById('trendDays').value, 10) || 5;
+            const parameter = document.getElementById('trendParameter').value;
+            const trend = document.getElementById('trendType').value;
+
+            if (days < 2) { showError('Days must be >= 2'); return; }
+            showLoading(true);
+
+            try {
+                const qs = new URLSearchParams({ days, parameter, trend });
+
+                const resp = await fetch(`${API_BASE}/api/filter/trend?` + qs.toString());
+                const payload = await resp.json();
+                if (!resp.ok) {
+                    throw new Error(payload.error || 'Filter failed');
+                }
+
+                displayTrendResults(payload);
+                document.getElementById('trendResultsSection').classList.add('active');
+                activateTab('trend-tab');
+
+            } catch (err) {
+                showError('Filter error: ' + err.message);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        function displayTrendResults(payload) {
+            const card = document.getElementById('trendResultsCard');
+            const content = document.getElementById('trendResultsContent');
+
+            if (!payload || !payload.results || payload.results.length === 0) {
+                content.innerHTML = '<p style="color:#7f8c8d;">No symbols matched the selected trend.</p>';
+                card.style.display = 'block';
+                return;
+            }
+
+            let html = `
+                <div style="margin-bottom:10px; font-weight:600;">Matched symbols: ${payload.count}</div>
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Symbol</th>
+                            <th>Latest Value</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            payload.results.forEach(r => {
+                html += `
+                    <tr>
+                        <td><strong>${r.symbol}</strong></td>
+                        <td>${r.latest_value !== null ? Number(r.latest_value).toLocaleString('en-IN') : '-'}</td>
+                        <td><button class="btn-secondary-custom" onclick="searchSymbolForTrend('${r.symbol}')">View</button></td>
+                    </tr>
+                `;
+            });
+
+            html += `</tbody></table>`;
+            content.innerHTML = html;
+            card.style.display = 'block';
+        }
+
+        // helper: load symbol historical/analysis for a matched trend symbol
+        function searchSymbolForTrend(symbol) {
+            document.getElementById('symbolInput').value = symbol;
+            // use days selected for historical rows
+            const days = parseInt(document.getElementById('trendDays').value, 10) || 5;
+            hideError();
+            showLoading(true);
+
+            Promise.all([
+                fetch(`${API_BASE}/api/analysis/${symbol}`),
+                fetch(`${API_BASE}/api/historical/${symbol}?limit=${days}&sort_by=date`)
+            ])
+            .then(async ([aResp, hResp]) => {
+                const a = await aResp.json();
+                const h = await hResp.json();
+                if (!a.found || h.count === 0) {
+                    showError(`No data found for ${symbol}`);
+                    return;
+                }
+                displayAnalysis(a.data);
+                displayHistorical(h.data, symbol);
+                document.getElementById('symbolResultsSection').classList.add('active');
+                activateTab('symbol-tab');
+                document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('en-IN');
+            })
+            .catch(err => showError('Error loading symbol: ' + err.message))
+            .finally(() => showLoading(false));
+        }
+
+        function displayAnalysis(data) {
+            const analysisContent = document.getElementById('analysisContent');
+            
+            const html = `
+                <div class="symbol-badge">${data.symbol}</div>
+                
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">5-Day Moving Average</div>
+                        <div class="metric-value">${formatNumber(data.five_dma)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">10-Day Moving Average</div>
+                        <div class="metric-value">${formatNumber(data.ten_dma)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Current Close Price</div>
+                        <div class="metric-value">${formatNumber(data.close_price_latest)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Current High</div>
+                        <div class="metric-value">${formatNumber(data.current_high_price)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Current Low</div>
+                        <div class="metric-value">${formatNumber(data.current_low_price)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Current Volume</div>
+                        <div class="metric-value">${formatNumber(data.current_volume, 0)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Delivery % (Latest)</div>
+                        <div class="metric-value">${formatNumber(data.latest_delivery_percentage)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">5-Day Delivery Avg</div>
+                        <div class="metric-value">${formatNumber(data.delivery_avg_5d)}%</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Price Range (10D)</div>
+                        <div class="metric-value">${formatNumber(data.price_range_10d)}</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Avg Volume (10D)</div>
+                        <div class="metric-value">${formatNumber(data.avg_volume_10d, 0)}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 12px; color: #7f8c8d;">
+                    Last Analyzed: ${formatDate(data.date_analyzed)}
+                </div>
+            `;
+            
+            analysisContent.innerHTML = html;
+        }
+        
+        function displayHistorical(data, symbol) {
+            const historicalContent = document.getElementById('historicalContent');
+            
+            if (!data || data.length === 0) {
+                historicalContent.innerHTML = '<p style="color: #7f8c8d;">No historical data available</p>';
+                return;
+            }
+            
+            let html = `
+                <table class="table-custom">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Open</th>
+                            <th>High</th>
+                            <th>Low</th>
+                            <th>Close</th>
+                            <th>Volume</th>
+                            <th>Delivery Qty</th>
+                            <th>Delivery %</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            
+            data.forEach(row => {
+                // Parse date string
+                const dateStr = row.date1;
+                const formattedDate = formatDate(dateStr);
+                
+                html += `
+                    <tr>
+                        <td>${formattedDate}</td>
+                        <td>${formatNumber(row.open_price)}</td>
+                        <td>${formatNumber(row.high_price)}</td>
+                        <td>${formatNumber(row.low_price)}</td>
+                        <td><strong>${formatNumber(row.close_price)}</strong></td>
+                        <td>${formatNumber(row.ttl_trd_qnty, 0)}</td>
+                        <td>${formatNumber(row.deliv_qty, 0)}</td>
+                        <td>${formatNumber(row.deliv_per)}%</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                    </tbody>
+                </table>
+            `;
+            
+            historicalContent.innerHTML = html;
+        }
+        
+        function downloadAnalysisData() {
+            showLoading(true);
+            fetch(`${API_BASE}/api/download/analysis-all`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Download failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create temporary link element and click it
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `NSE_Analysis_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showLoadingNotification('Analysis data downloaded successfully!');
+                })
+                .catch(error => {
+                    showError('Error downloading analysis data: ' + error.message);
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        function downloadHistoricalData() {
+            showLoading(true);
+            fetch(`${API_BASE}/api/download/historical-all`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Download failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create temporary link element and click it
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `NSE_Historical_10Days_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+                    
+                    showLoadingNotification('Historical data downloaded successfully!');
+                })
+                .catch(error => {
+                    showError('Error downloading historical data: ' + error.message);
+                })
+                .finally(() => {
+                    showLoading(false);
+                });
+        }
+        
+        function showLoadingNotification(message) {
+            const errorBox = document.getElementById('errorBox');
+            errorBox.innerHTML = `<i class="bi bi-check-circle"></i> ${message}`;
+            errorBox.style.background = '#d5f4e6';
+            errorBox.style.color = '#27ae60';
+            errorBox.style.borderLeftColor = '#27ae60';
+            errorBox.classList.add('active');
+            
+            setTimeout(() => {
+                errorBox.classList.remove('active');
+            }, 5000);
+        }
+        
+        // Populate with a default symbol on load
+        window.addEventListener('load', () => {
+            showScreen('login');
+            document.getElementById('symbolInput').value = 'ABB';
+            document.getElementById('loginUsername').focus();
+        });
+    </script>
+</body>
+</html>
