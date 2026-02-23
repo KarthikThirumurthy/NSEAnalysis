@@ -18,6 +18,7 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow-x: hidden;
         }
         
         .container-custom {
@@ -67,6 +68,10 @@
             font-size: 16px;
             transition: border-color 0.3s;
         }
+
+        .touch-input {
+            min-height: 44px;
+        }
         
         .input-group-custom input:focus {
             border-color: var(--secondary-color);
@@ -83,6 +88,7 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s;
+            min-height: 44px;
         }
         
         .btn-primary-custom:hover {
@@ -101,6 +107,7 @@
             cursor: pointer;
             transition: all 0.3s;
             margin-right: 10px;
+            min-height: 44px;
         }
         
         .btn-secondary-custom:hover {
@@ -172,6 +179,28 @@
         .table-custom {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 15px;
+            min-width: 760px;
+        }
+
+        .table-scroll {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .trend-controls {
+            display:flex;
+            gap:12px;
+            align-items:center;
+            margin-top:12px;
+            flex-wrap:wrap;
+        }
+
+        .download-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
             margin-top: 15px;
         }
         
@@ -281,12 +310,84 @@
         }
         
         @media (max-width: 768px) {
+            .container-custom {
+                margin-top: 12px;
+                margin-bottom: 12px;
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+
+            .header,
+            .search-section,
+            .card-body-custom,
+            .card-header-custom {
+                padding: 16px;
+            }
+
+            .header h1 {
+                font-size: 24px;
+            }
+
             .input-group-custom {
                 flex-direction: column;
+            }
+
+            .input-group-custom input {
+                width: 100%;
+                font-size: 16px;
+            }
+
+            .btn-primary-custom,
+            .btn-secondary-custom {
+                width: 100%;
+                margin-right: 0;
+            }
+
+            .download-actions {
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            #searchTabs {
+                flex-wrap: nowrap;
+                overflow-x: auto;
+                overflow-y: hidden;
+                white-space: nowrap;
+            }
+
+            #searchTabs .nav-item {
+                flex: 0 0 auto;
+            }
+
+            .trend-controls {
+                align-items: stretch;
+            }
+
+            .trend-controls > div {
+                width: 100%;
+            }
+
+            .trend-controls select,
+            .trend-controls input {
+                width: 100% !important;
+                min-height: 40px;
+            }
+
+            .trend-controls [style*='margin-left:auto'] {
+                margin-left: 0 !important;
             }
             
             .metric-grid {
                 grid-template-columns: 1fr;
+                gap: 12px;
+            }
+
+            .metric-card {
+                padding: 14px;
+            }
+
+            .metric-value {
+                font-size: 20px;
             }
             
             .table-custom {
@@ -314,6 +415,7 @@
                     <input
                         type="text"
                         id="loginUsername"
+                        class="touch-input"
                         placeholder="Username"
                         autocapitalize="none"
                         autocomplete="username"
@@ -323,6 +425,7 @@
                     <input
                         type="password"
                         id="loginPassword"
+                        class="touch-input"
                         placeholder="Password"
                     >
                 </div>
@@ -345,6 +448,7 @@
                         <input
                             type="text"
                             id="resetUsername"
+                            class="touch-input"
                             placeholder="Username for reset"
                             autocapitalize="none"
                             autocomplete="username"
@@ -354,6 +458,7 @@
                         <input
                             type="password"
                             id="resetPassword"
+                            class="touch-input"
                             placeholder="New password"
                         >
                     </div>
@@ -443,7 +548,7 @@
                 <!-- Trend Analysis (All symbols) -->
                 <div class="search-section" style="background: #f7fbff; border-left: 4px solid var(--secondary-color);">
                     <h5><i class="bi bi-bar-chart-line"></i> Trend Analysis (All Symbols)</h5>
-                    <div style="display:flex; gap:12px; align-items:center; margin-top:12px; flex-wrap:wrap;">
+                    <div class="trend-controls">
                         <div style="display:flex; gap:8px; align-items:center;">
                             <label style="font-size:12px; color:#7f8c8d;">Days</label>
                             <input id="trendDays" type="number" min="2" max="60" value="5" style="width:80px; padding:6px; border-radius:6px; border:1px solid #ecf0f1;">
@@ -498,7 +603,7 @@
             <!-- Download Section -->
             <div class="search-section" style="background: #e8f4f8; border-left: 4px solid var(--secondary-color);">
                 <h5><i class="bi bi-download"></i> Export Data</h5>
-                <div style="display: flex; gap: 15px; flex-wrap: wrap; margin-top: 15px;">
+                <div class="download-actions">
                     <button class="btn-primary-custom" onclick="downloadAnalysisData()" style="background: var(--success-color);">
                         <i class="bi bi-file-earmark-csv"></i> Download All Analysis Data
                     </button>
@@ -782,15 +887,16 @@
 
             let html = `
                 <div style="margin-bottom:10px; font-weight:600;">Matched symbols: ${payload.count}</div>
-                <table class="table-custom">
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Latest Value</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="table-scroll">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Latest Value</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
 
             payload.results.forEach(r => {
@@ -803,7 +909,7 @@
                 `;
             });
 
-            html += `</tbody></table>`;
+            html += `</tbody></table></div>`;
             content.innerHTML = html;
             card.style.display = 'block';
         }
@@ -903,20 +1009,21 @@
             }
             
             let html = `
-                <table class="table-custom">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Open</th>
-                            <th>High</th>
-                            <th>Low</th>
-                            <th>Close</th>
-                            <th>Volume</th>
-                            <th>Delivery Qty</th>
-                            <th>Delivery %</th>
-                        </tr>
-                    </thead>
-                    <tbody>
+                <div class="table-scroll">
+                    <table class="table-custom">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Open</th>
+                                <th>High</th>
+                                <th>Low</th>
+                                <th>Close</th>
+                                <th>Volume</th>
+                                <th>Delivery Qty</th>
+                                <th>Delivery %</th>
+                            </tr>
+                        </thead>
+                        <tbody>
             `;
             
             data.forEach(row => {
@@ -939,8 +1046,9 @@
             });
             
             html += `
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             `;
             
             historicalContent.innerHTML = html;
@@ -1024,6 +1132,23 @@
             showScreen('login');
             document.getElementById('symbolInput').value = 'ABB';
             document.getElementById('loginUsername').focus();
+
+            const loginPassword = document.getElementById('loginPassword');
+            const loginUsername = document.getElementById('loginUsername');
+            if (loginPassword) {
+                loginPassword.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        loginUser();
+                    }
+                });
+            }
+            if (loginUsername) {
+                loginUsername.addEventListener('keydown', (event) => {
+                    if (event.key === 'Enter') {
+                        loginUser();
+                    }
+                });
+            }
         });
     </script>
 </body>
